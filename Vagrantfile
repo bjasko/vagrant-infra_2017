@@ -8,7 +8,6 @@ Vagrant.configure("2") do |config|
     srv1pubcloud.vm.network :private_network, ip: "192.168.56.100"
 
     srv1pubcloud.vm.provider :virtualbox do |v|
-      v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       v.customize ["modifyvm", :id, "--memory", 512]
       v.customize ["modifyvm", :id, "--name", "pub-cloud-server-1" ]
     end
@@ -23,12 +22,14 @@ Vagrant.configure("2") do |config|
     srv1bout.vm.network :private_network, ip: "192.168.56.150"
 
     srv1bout.vm.provider :virtualbox do |v|
-      #v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       v.customize ["modifyvm", :id, "--memory", 512]
       v.customize ["modifyvm", :id, "--name", "bout-server-1" ]
     end
 
     srv1bout.vm.provision :shell, inline: <<-SHELL
+      sudo add-apt-repository ppa:cipherdyne/fwknop -y
+      sudo apt-get update -y
+      sudo apt-get install fwknop-server -y
     SHELL
 
   end
@@ -41,11 +42,19 @@ Vagrant.configure("2") do |config|
     rcli1.vm.network :private_network, ip: "192.168.56.201"
 
     rcli1.vm.provider :virtualbox do |v|
-      #v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       v.customize ["modifyvm", :id, "--memory", 256+128 ]
       v.customize ["modifyvm", :id, "--name", "remote-client-1"]
     end
+
+    rcli1.vm.provision :shell, inline: <<-SHELL
+      sudo add-apt-repository ppa:cipherdyne/fwknop -y
+      sudo apt-get update -y
+      sudo apt-get install fwknop-client -y
+    SHELL
+
+
   end
+
 
   config.vm.define "rcli2" do |rcli2|
     rcli2.vm.box = "ubuntu-16.04"
@@ -54,10 +63,18 @@ Vagrant.configure("2") do |config|
     rcli2.vm.network :private_network, ip: "192.168.56.202"
 
     rcli2.vm.provider :virtualbox do |v|
-      #v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       v.customize ["modifyvm", :id, "--memory", 256+128 ]
       v.customize ["modifyvm", :id, "--name", "remote-client-2"]
     end
+
+    rcli2.vm.provision :shell, inline: <<-SHELL
+      sudo add-apt-repository ppa:cipherdyne/fwknop -y
+      sudo apt-get update -y
+      sudo apt-get install fwknop-client -y
+    SHELL
+
+
+
   end
 
 
