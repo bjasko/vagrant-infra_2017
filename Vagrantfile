@@ -1,3 +1,6 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
 Vagrant.configure("2") do |config|
 
   # server 1 public cloud
@@ -26,10 +29,16 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--name", "bout-server-1" ]
     end
 
-    srv1bout.vm.provision :shell, inline: <<-SHELL
+    srv1bout.vm.provision :shell, :privileged => false,  inline: <<-SHELL
       sudo add-apt-repository ppa:cipherdyne/fwknop -y
+      sudo add-apt-repository ppa:jonathonf/golang -y
       sudo apt-get update -y
       sudo apt-get install fwknop-server -y
+    
+      sudo apt-get install golang-1.8 -y
+      /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
+      #/home/vagrant/go/bin/chisel --version
+
     SHELL
 
   end
@@ -46,10 +55,18 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--name", "remote-client-1"]
     end
 
-    rcli1.vm.provision :shell, inline: <<-SHELL
+    rcli1.vm.provision :shell, :privileged => false, inline: <<-SHELL
       sudo add-apt-repository ppa:cipherdyne/fwknop -y
+      sudo add-apt-repository ppa:jonathonf/golang -y
+
       sudo apt-get update -y
       sudo apt-get install fwknop-client -y
+      sudo apt-get install golang-1.8 -y
+
+      /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
+      #/home/vagrant/go/bin/chisel --version
+    
+      sudo apt-get install autossh -y
     SHELL
 
 
@@ -67,12 +84,16 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--name", "remote-client-2"]
     end
 
-    rcli2.vm.provision :shell, inline: <<-SHELL
+    rcli2.vm.provision :shell, :privileged => false, inline: <<-SHELL
       sudo add-apt-repository ppa:cipherdyne/fwknop -y
+      sudo add-apt-repository ppa:jonathonf/golang -y
       sudo apt-get update -y
       sudo apt-get install fwknop-client -y
-    SHELL
+      sudo apt-get install golang-1.8 -y
+      sudo apt-get install autossh -y
+      /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
 
+    SHELL
 
 
   end
