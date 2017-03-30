@@ -70,7 +70,7 @@ ws_provision_shell = <<-SHELL
          sudo add-apt-repository ppa:jonathonf/golang -y
          sudo apt-get update -y
          #sudo apt-get install fwknop-client -y
-         sudo apt-get install golang-1.8 -y
+         sudo apt-get install golang-1.8 posgresql-client -y
          /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
       fi
 
