@@ -109,6 +109,7 @@ ws_provision_shell = <<-SHELL
 
       # start_chisel.sh pravi link via http/webproxy sa remote klijentskim servisima
       echo "#!/bin/bash" > /tmp/start_chisel.sh
+      echo "killall chisel" >> /tmp/start_chisel.sh
 
       echo "127.0.0.1       localhost" >> /tmp/hosts.file
       echo "::1     localhost ip6-localhost ip6-loopback" >> /tmp/hosts.file
