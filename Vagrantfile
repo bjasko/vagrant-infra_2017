@@ -3,15 +3,18 @@
 
 eth_filter="enp0s8"
 
+# remote client (server kod klijenta)
 rcli_provision_shell = <<-SHELL
 
       if dpkg -s nginx 2>/dev/null 
       then 
          echo all installed 
       else
+         # contains nginx mainline repos
+         sudo cp /vagrant/apt/sources.list /etc/apt/sources.list 
+         sudo apt-get update -y
          sudo add-apt-repository ppa:cipherdyne/fwknop -y
          sudo add-apt-repository ppa:jonathonf/golang -y
-         sudo add-apt-repository ppa:ondrej/nginx -y
          sudo apt-get update -y
          sudo apt-get install fwknop-client -y
          sudo apt-get install golang-1.8 -y
@@ -19,6 +22,7 @@ rcli_provision_shell = <<-SHELL
          /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
       fi
 
+      sudo sudo apt-key add /vagrant/nginx/nginx_signing.key
       cp /vagrant/fwknop-client/fwknoprc_${LOCAL_IP} /home/vagrant/.fwknoprc
 
       echo "fwknop -A tcp/22 --use-hmac -a ${LOCAL_IP} -n ${SERVER_IP}"
@@ -27,10 +31,44 @@ rcli_provision_shell = <<-SHELL
       [ -f /home/vagrant/.ssh/id_rsa ] || ssh-keygen -P "" -C "test" -f /home/vagrant/.ssh/id_rsa
       sshpass -f /vagrant/ssh_password.txt ssh-copy-id -o StrictHostKeyChecking=no vagrant@${SERVER_IP}
 
-      ssh vagrant@192.168.56.150 uname -a
+      ssh vagrant@${SERVER_IP} uname -a
 SHELL
 
+# bringout workstation
+ws_provision_shell = <<-SHELL
+
+      if dpkg -s golang-1.8 2>/dev/null 
+      then 
+         echo all installed 
+      else
+         # contains nginx mainline repos
+         sudo cp /vagrant/apt/sources.list /etc/apt/sources.list 
+         sudo add-apt-repository ppa:cipherdyne/fwknop -y
+         sudo add-apt-repository ppa:jonathonf/golang -y
+         sudo apt-get update -y
+         #sudo apt-get install fwknop-client -y
+         sudo apt-get install golang-1.8 -y
+         /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
+      fi
+
+      #na radnoj stanici bringout ne trebamo nginx, ni fknop client
+      #sudo sudo apt-key add /vagrant/nginx/nginx_signing.key
+      #cp /vagrant/fwknop-client/fwknoprc_${LOCAL_IP} /home/vagrant/.fwknoprc
+
+      #echo "fwknop -A tcp/22 --use-hmac -a ${LOCAL_IP} -n ${SERVER_IP}"
+      #fwknop -A tcp/22 --use-hmac -a ${LOCAL_IP} -n ${SERVER_IP}
+      #echo passwordless ssh srv1bout
+      #[ -f /home/vagrant/.ssh/id_rsa ] || ssh-keygen -P "" -C "test" -f /home/vagrant/.ssh/id_rsa
+      #sshpass -f /vagrant/ssh_password.txt ssh-copy-id -o StrictHostKeyChecking=no vagrant@${SERVER_IP}
+
+      #ssh vagrant@${SERVER_IP} uname -a
+SHELL
+
+
+
 rcli1_provision_shell = "SERVER_IP=192.168.56.150\nLOCAL_IP=192.168.56.201\necho $SERVER_IP, $LOCAL_IP\n" + rcli_provision_shell
+rcli2_provision_shell = "SERVER_IP=192.168.56.150\nLOCAL_IP=192.168.56.202\necho $SERVER_IP, $LOCAL_IP\n" + rcli_provision_shell
+wsbout1_provision_shell = "SERVER_IP=192.168.56.150\n" + ws_provision_shell
 
 
 Vagrant.configure("2") do |config|
@@ -125,7 +163,23 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--name", "remote-client-2"]
     end
 
-    rcli2.vm.provision :shell, :privileged => false, inline: rcli_provision_shell
+    rcli2.vm.provision :shell, :privileged => false, inline: rcli2_provision_shell
+    
+  end
+
+
+  config.vm.define "wsbout1" do |ws|
+    ws.vm.box = "ubuntu-16.04"
+    ws.vm.hostname = 'bringout-ws-1'
+
+    ws.vm.network :private_network, ip: "192.168.56.250"
+
+    ws.vm.provider :virtualbox do |v|
+      v.customize ["modifyvm", :id, "--memory", 256+128 ]
+      v.customize ["modifyvm", :id, "--name", "bringout-ws-1"]
+    end
+
+    ws.vm.provision :shell, :privileged => false, inline: wsbout1_provision_shell
     
   end
 

@@ -1,0 +1,8 @@
+[default]
+
+[192.168.56.150]
+ACCESS                      tcp/22
+SPA_SERVER                  192.168.56.150
+KEY_BASE64                  kxdQMMOiemd5/5BaOWMNxijmLyRiRpd+3Dy2H1VbM5A=
+HMAC_KEY_BASE64             RwDeOeqmbTU7P3c6dRqPa9LvICSxR41/NIQQYujbbY4ggoWcJDI+AlqbhF58w+bVp04mQSOjOD7c9z3yfvec+A==
+USE_HMAC                    Y
