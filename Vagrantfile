@@ -1,6 +1,38 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+eth_filter="enp0s8"
+
+rcli_provision_shell = <<-SHELL
+
+      if dpkg -s nginx 2>/dev/null 
+      then 
+         echo all installed 
+      else
+         sudo add-apt-repository ppa:cipherdyne/fwknop -y
+         sudo add-apt-repository ppa:jonathonf/golang -y
+         sudo add-apt-repository ppa:ondrej/nginx -y
+         sudo apt-get update -y
+         sudo apt-get install fwknop-client -y
+         sudo apt-get install golang-1.8 -y
+         sudo apt-get install autossh sshpass nginx -y
+         /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
+      fi
+
+      cp /vagrant/fwknop-client/fwknoprc_${LOCAL_IP} /home/vagrant/.fwknoprc
+
+      echo "fwknop -A tcp/22 --use-hmac -a ${LOCAL_IP} -n ${SERVER_IP}"
+      fwknop -A tcp/22 --use-hmac -a ${LOCAL_IP} -n ${SERVER_IP}
+      echo passwordless ssh srv1bout
+      [ -f /home/vagrant/.ssh/id_rsa ] || ssh-keygen -P "" -C "test" -f /home/vagrant/.ssh/id_rsa
+      sshpass -f /vagrant/ssh_password.txt ssh-copy-id -o StrictHostKeyChecking=no vagrant@${SERVER_IP}
+
+      ssh vagrant@192.168.56.150 uname -a
+SHELL
+
+rcli1_provision_shell = "SERVER_IP=192.168.56.150\nLOCAL_IP=192.168.56.201\necho $SERVER_IP, $LOCAL_IP\n" + rcli_provision_shell
+
+
 Vagrant.configure("2") do |config|
 
   # server 1 public cloud
@@ -30,21 +62,42 @@ Vagrant.configure("2") do |config|
     end
 
     srv1bout.vm.provision :shell, :privileged => false,  inline: <<-SHELL
-      sudo add-apt-repository ppa:cipherdyne/fwknop -y
-      sudo add-apt-repository ppa:jonathonf/golang -y
-      sudo add-apt-repository ppa:ondrej/nginx -y
-      sudo apt-get update -y
-      sudo apt-get install fwknop-server nginx -y
-    
-      sudo apt-get install golang-1.8 -y
-      /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
-      #/home/vagrant/go/bin/chisel --version
 
+      if dpkg -s nginx 2>/dev/null 
+      then 
+         echo all installed 
+      else
+         sudo add-apt-repository ppa:cipherdyne/fwknop -y
+         sudo add-apt-repository ppa:jonathonf/golang -y
+         sudo add-apt-repository ppa:ondrej/nginx -y
+         sudo apt-get update -y
+         sudo apt-get install fwknop-server nginx -y
+    
+         sudo apt-get install golang-1.8 -y
+         /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
+         #/home/vagrant/go/bin/chisel --version
+      fi
+
+      sudo iptables -F
+      sudo iptables -A INPUT -i #{eth_filter} -p tcp --dport 22 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+      sudo iptables -A INPUT -i #{eth_filter} -p tcp --dport 22 -j DROP
+
+      sudo iptables -L INPUT -v
+
+      sudo cp /vagrant/fwknop-server/default /etc/default/fwknop-server
+      sudo cp /vagrant/fwknop-server/access.conf /etc/fwknop/access.conf
+      sudo cp /vagrant/fwknop-server/fwknopd.conf /etc/fwknop/fwknopd.conf
+      sudo chmod 0600 /etc/fwknop/*
+
+      sudo service fwknop-server restart
+      #journalctl -u fwknop-server.service
+      sudo service fwknop-server status
+      sudo iptables -L
     SHELL
 
   end
 
-
+ 
   config.vm.define "rcli1" do |rcli1|
     rcli1.vm.box = "ubuntu-16.04"
     rcli1.vm.hostname = 'remote-client-1'
@@ -56,24 +109,8 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--name", "remote-client-1"]
     end
 
-    rcli1.vm.provision :shell, :privileged => false, inline: <<-SHELL
-      sudo add-apt-repository ppa:cipherdyne/fwknop -y
-      sudo add-apt-repository ppa:jonathonf/golang -y
-      sudo add-apt-repository ppa:ondrej/nginx -y
-
-      sudo apt-get update -y
-      sudo apt-get install fwknop-client autossh sshpass nginx -y
-      sudo apt-get install golang-1.8 -y
-
-      /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
-      #/home/vagrant/go/bin/chisel --version
-
-      echo passwordless ssh srv1bout
-      shpass -f /vagrant/ssh_password.txt ssh-copy-id vagrant@192.168.56.150
-
-    SHELL
-
-
+    rcli1.vm.provision :shell, :privileged => false, 
+                       inline: rcli1_provision_shell 
   end
 
 
@@ -88,31 +125,8 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--name", "remote-client-2"]
     end
 
-    rcli2.vm.provision :shell, :privileged => false, inline: <<-SHELL
-
-      if dpkg -s nginx 2>/dev/null 
-      then 
-         echo all installed 
-      else
-         sudo add-apt-repository ppa:cipherdyne/fwknop -y
-         sudo add-apt-repository ppa:jonathonf/golang -y
-         sudo add-apt-repository ppa:ondrej/nginx -y
-         sudo apt-get update -y
-         sudo apt-get install fwknop-client -y
-         sudo apt-get install golang-1.8 -y
-         sudo apt-get install autossh sshpass nginx -y
-         /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
-      fi
-
-      echo passwordless ssh srv1bout
-      [ -f /home/vagrant/.ssh/id_rsa ] || ssh-keygen -P "" -C "test" -f /home/vagrant/.ssh/id_rsa
-      sshpass -f /vagrant/ssh_password.txt ssh-copy-id -o StrictHostKeyChecking=no vagrant@192.168.56.150
-
-      ssh vagrant@192.168.56.150 uname -a
-
-    SHELL
-
-
+    rcli2.vm.provision :shell, :privileged => false, inline: rcli_provision_shell
+    
   end
 
 
