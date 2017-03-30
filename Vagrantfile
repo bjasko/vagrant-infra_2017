@@ -12,6 +12,7 @@ rcli_provision_shell = <<-SHELL
       else
          # contains nginx mainline repos
          sudo cp /vagrant/apt/sources.list /etc/apt/sources.list 
+         sudo sudo apt-key add /vagrant/nginx/nginx_signing.key
          sudo apt-get update -y
          sudo add-apt-repository ppa:cipherdyne/fwknop -y
          sudo add-apt-repository ppa:jonathonf/golang -y
@@ -22,7 +23,6 @@ rcli_provision_shell = <<-SHELL
          /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
       fi
 
-      sudo sudo apt-key add /vagrant/nginx/nginx_signing.key
       cp /vagrant/fwknop-client/fwknoprc_${LOCAL_IP} /home/vagrant/.fwknoprc
 
       echo "fwknop -A tcp/22 --use-hmac -a ${LOCAL_IP} -n ${SERVER_IP}"
