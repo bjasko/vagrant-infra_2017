@@ -32,6 +32,26 @@ rcli_provision_shell = <<-SHELL
       sshpass -f /vagrant/ssh_password.txt ssh-copy-id -o StrictHostKeyChecking=no vagrant@${SERVER_IP}
 
       ssh vagrant@${SERVER_IP} uname -a
+
+
+      echo "Updating nginx configuration"
+      sudo cp /vagrant/nginx/nginx.conf /etc/nginx/nginx.conf
+      case $LOCAL_IP in
+        *201) 
+	   echo "chisel rcli1"
+           sudo cp -av /vagrant/nginx/conf.d/chisel-rcli1.conf  /etc/nginx/conf.d/chisel-rcli1.conf 
+           ;;
+        *202) 
+	   echo "chisel rcli2"
+           sudo cp -av /vagrant/nginx/conf.d/chisel-rcli2.conf  /etc/nginx/conf.d/chisel-rcli2.conf 
+           ;;
+        *) 
+           echo "nepostejeci remote client?" 
+           ;;
+      esac
+      sudo service nginx restart
+      sudo service nginx status
+
 SHELL
 
 # bringout workstation
