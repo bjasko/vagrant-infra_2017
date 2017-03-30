@@ -1,7 +1,15 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+# prva privatni eth device, njega filterisemo
 eth_filter="enp0s8"
+
+BOUT_DOMAIN="test.out.ba"
+LAN_BOUT="192.168.56"
+LAN_BOUT_INTERNAL="192.168.0"
+
+SRV1_BOUT=LAN_BOUT+".150"
+SRV1_BOUT_INTERNAL=LAN_BOUT_INTERNAL+".150"
 
 # remote client (server kod klijenta)
 rcli_provision_shell = <<-SHELL
@@ -55,6 +63,7 @@ rcli_provision_shell = <<-SHELL
       sudo su postgres -c "psql < /vagrant/psql/psql_set_password"
       sudo su postgres -c "psql -h localhost -U postgres -W postgres < /vagrant/psql/psql_list_databases"
 
+
 SHELL
 
 # bringout workstation
@@ -85,13 +94,48 @@ ws_provision_shell = <<-SHELL
       #sshpass -f /vagrant/ssh_password.txt ssh-copy-id -o StrictHostKeyChecking=no vagrant@${SERVER_IP}
 
       #ssh vagrant@${SERVER_IP} uname -a
+
+      echo namjerno rutu LAN_BOUT: #{LAN_BOUT} disableujemo na radnim stanicama
+      echo tako da smo sigurno da one samo preko internog lan-a #{LAN_BOUT_INTERNAL} komuniciraju sa serverom
+      echo "#!/bin/sh" > /tmp/rc.local
+      echo "ip route add #{LAN_BOUT}.0/24 dev enp0s8" >> /tmp/rc.local
+      echo "echo end of rc.local" >> /tmp/rc.local
+      sudo mv /tmp/rc.local /etc/rc.local
+      sudo chmod +x /etc/rc.local
+      sudo /etc/rc.local
+
+      # dok nemamo dns-a, podesavamo /etc/hosts
+      echo "127.0.0.1  bringout-ws-1" > /tmp/hosts.file
+
+      # start_chisel.sh pravi link via http/webproxy sa remote klijentskim servisima
+      echo "#!/bin/bash" > /tmp/start_chisel.sh
+
+      echo "127.0.0.1       localhost" >> /tmp/hosts.file
+      echo "::1     localhost ip6-localhost ip6-loopback" >> /tmp/hosts.file
+      echo "ff02::1 ip6-allnodes" >> /tmp/hosts.file
+      echo "ff02::2 ip6-allrouters" >> /tmp/hosts.file
+      for cli_no in 1 2
+      do
+	  echo "#{SRV1_BOUT_INTERNAL} remote-client-${cli_no} remote-client-${cli_no}.#{BOUT_DOMAIN}"  >> /tmp/hosts.file
+	  echo "echo \"na localhostu se aktiviraju portovi  220${cli_no} - ssh, 520${cli_no} - psql za pristup remote-client-${cli_no}\"" >> /tmp/start_chisel.sh
+	  echo "echo \"test servisa:\"" >> /tmp/start_chisel.sh
+          echo "echo \"psql -p 520${cli_no} -h localhost -U postgres -W postgres\"" >> /tmp/start_chisel.sh
+          echo "echo \"postgresql password: test01\"" >> /tmp/start_chisel.sh
+          echo "echo \"ssh -p 220${cli_no} vagrant@localhost\"" >> /tmp/start_chisel.sh
+	  echo "~/go/bin/chisel client http://remote-client-${cli_no}.#{BOUT_DOMAIN} 220${cli_no}:22 520${cli_no}:5432>/tmp/chisel.log &" >> /tmp/start_chisel.sh
+      done
+      sudo mv /tmp/hosts.file /etc/hosts
+
+      mv /tmp/start_chisel.sh /home/vagrant/
+      chmod +x /home/vagrant/start_chisel.sh
+
 SHELL
 
 
 
-rcli1_provision_shell = "SERVER_IP=192.168.56.150\nLOCAL_IP=192.168.56.201\necho $SERVER_IP, $LOCAL_IP\n" + rcli_provision_shell
-rcli2_provision_shell = "SERVER_IP=192.168.56.150\nLOCAL_IP=192.168.56.202\necho $SERVER_IP, $LOCAL_IP\n" + rcli_provision_shell
-wsbout1_provision_shell = "SERVER_IP=192.168.56.150\n" + ws_provision_shell
+rcli1_provision_shell = "SERVER_IP=#{SRV1_BOUT}\nLOCAL_IP=192.168.56.201\necho $SERVER_IP, $LOCAL_IP\n" + rcli_provision_shell
+rcli2_provision_shell = "SERVER_IP=#{SRV1_BOUT}\nLOCAL_IP=192.168.56.202\necho $SERVER_IP, $LOCAL_IP\n" + rcli_provision_shell
+wsbout1_provision_shell = "SERVER_IP=#{SRV1_BOUT}\n" + ws_provision_shell
 
 
 Vagrant.configure("2") do |config|
@@ -100,8 +144,7 @@ Vagrant.configure("2") do |config|
   config.vm.define "srv1pubcloud" do | srv1pubcloud |
     srv1pubcloud.vm.box = "ubuntu-16.04"
     srv1pubcloud.vm.hostname = 'pub-cloud-server-1'
-
-    srv1pubcloud.vm.network :private_network, ip: "192.168.56.100"
+    srv1pubcloud.vm.network :private_network, ip: LAN_BOUT+".100"
 
     srv1pubcloud.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 512]
@@ -115,7 +158,9 @@ Vagrant.configure("2") do |config|
     srv1bout.vm.box = "ubuntu-16.04"
     srv1bout.vm.hostname = 'bout-server-1'
 
-    srv1bout.vm.network :private_network, ip: "192.168.56.150"
+    srv1bout.vm.network :private_network, ip: SRV1_BOUT, netmask: "24"
+    srv1bout.vm.network :private_network, ip: SRV1_BOUT_INTERNAL, netmask: "24"
+
 
     srv1bout.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 512]
@@ -163,7 +208,7 @@ Vagrant.configure("2") do |config|
     rcli1.vm.box = "ubuntu-16.04"
     rcli1.vm.hostname = 'remote-client-1'
 
-    rcli1.vm.network :private_network, ip: "192.168.56.201"
+    rcli1.vm.network :private_network, ip: LAN_BOUT + ".201"
 
     rcli1.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 256+128 ]
@@ -179,7 +224,7 @@ Vagrant.configure("2") do |config|
     rcli2.vm.box = "ubuntu-16.04"
     rcli2.vm.hostname = 'remote-client-2'
 
-    rcli2.vm.network :private_network, ip: "192.168.56.202"
+    rcli2.vm.network :private_network, ip: LAN_BOUT + ".202"
 
     rcli2.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 256+128 ]
@@ -195,7 +240,7 @@ Vagrant.configure("2") do |config|
     ws.vm.box = "ubuntu-16.04"
     ws.vm.hostname = 'bringout-ws-1'
 
-    ws.vm.network :private_network, ip: "192.168.56.250"
+    ws.vm.network :private_network, ip: LAN_BOUT_INTERNAL + ".201", netmask: "24"
 
     ws.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 256+128 ]
