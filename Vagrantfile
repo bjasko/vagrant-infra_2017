@@ -32,8 +32,9 @@ Vagrant.configure("2") do |config|
     srv1bout.vm.provision :shell, :privileged => false,  inline: <<-SHELL
       sudo add-apt-repository ppa:cipherdyne/fwknop -y
       sudo add-apt-repository ppa:jonathonf/golang -y
+      sudo add-apt-repository ppa:ondrej/nginx -y
       sudo apt-get update -y
-      sudo apt-get install fwknop-server -y
+      sudo apt-get install fwknop-server nginx -y
     
       sudo apt-get install golang-1.8 -y
       /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
@@ -58,15 +59,18 @@ Vagrant.configure("2") do |config|
     rcli1.vm.provision :shell, :privileged => false, inline: <<-SHELL
       sudo add-apt-repository ppa:cipherdyne/fwknop -y
       sudo add-apt-repository ppa:jonathonf/golang -y
+      sudo add-apt-repository ppa:ondrej/nginx -y
 
       sudo apt-get update -y
-      sudo apt-get install fwknop-client -y
+      sudo apt-get install fwknop-client autossh sshpass nginx -y
       sudo apt-get install golang-1.8 -y
 
       /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
       #/home/vagrant/go/bin/chisel --version
-    
-      sudo apt-get install autossh -y
+
+      echo passwordless ssh srv1bout
+      shpass -f /vagrant/ssh_password.txt ssh-copy-id vagrant@192.168.56.150
+
     SHELL
 
 
@@ -85,13 +89,26 @@ Vagrant.configure("2") do |config|
     end
 
     rcli2.vm.provision :shell, :privileged => false, inline: <<-SHELL
-      sudo add-apt-repository ppa:cipherdyne/fwknop -y
-      sudo add-apt-repository ppa:jonathonf/golang -y
-      sudo apt-get update -y
-      sudo apt-get install fwknop-client -y
-      sudo apt-get install golang-1.8 -y
-      sudo apt-get install autossh -y
-      /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
+
+      if dpkg -s nginx 2>/dev/null 
+      then 
+         echo all installed 
+      else
+         sudo add-apt-repository ppa:cipherdyne/fwknop -y
+         sudo add-apt-repository ppa:jonathonf/golang -y
+         sudo add-apt-repository ppa:ondrej/nginx -y
+         sudo apt-get update -y
+         sudo apt-get install fwknop-client -y
+         sudo apt-get install golang-1.8 -y
+         sudo apt-get install autossh sshpass nginx -y
+         /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
+      fi
+
+      echo passwordless ssh srv1bout
+      [ -f /home/vagrant/.ssh/id_rsa ] || ssh-keygen -P "" -C "test" -f /home/vagrant/.ssh/id_rsa
+      sshpass -f /vagrant/ssh_password.txt ssh-copy-id -o StrictHostKeyChecking=no vagrant@192.168.56.150
+
+      ssh vagrant@192.168.56.150 uname -a
 
     SHELL
 
