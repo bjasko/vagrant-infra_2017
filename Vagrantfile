@@ -19,7 +19,7 @@ rcli_provision_shell = <<-SHELL
          sudo apt-get update -y
          sudo apt-get install fwknop-client -y
          sudo apt-get install golang-1.8 -y
-         sudo apt-get install autossh sshpass nginx -y
+         sudo apt-get install autossh sshpass nginx postgresql -y
          /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
       fi
 
@@ -51,6 +51,9 @@ rcli_provision_shell = <<-SHELL
       esac
       sudo service nginx restart
       sudo service nginx status
+
+      sudo su postgres -c "psql < /vagrant/psql/psql_set_password"
+      sudo su postgres -c "psql -h localhost -U postgres -W postgres < /vagrant/psql/psql_list_databases"
 
 SHELL
 
