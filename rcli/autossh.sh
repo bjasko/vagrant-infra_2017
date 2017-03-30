@@ -1,7 +1,12 @@
 #!/bin/bash
 
 # it's usually a good idea to exit upon error
-set -e
+#set -e
+
+killall autossh
+killall ssh
+killall autossh
+killall ssh
 
 # your connection parameters
 user=vagrant

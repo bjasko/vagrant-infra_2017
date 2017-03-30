@@ -66,25 +66,27 @@ rcli_provision_shell = <<-SHELL
 
 SHELL
 
+def set_ws_provision_shell( bout_ws )
+
 # bringout workstation
 ws_provision_shell = <<-SHELL
 
-      if dpkg -s golang-1.8 2>/dev/null 
+      if dpkg -s golang-1.8 2>/dev/null && dpkg -s pogresql-client>/dev/null 
       then 
          echo all installed 
       else
          # contains nginx mainline repos
          sudo cp /vagrant/apt/sources.list /etc/apt/sources.list 
+         sudo sudo apt-key add /vagrant/nginx/nginx_signing.key
          sudo add-apt-repository ppa:cipherdyne/fwknop -y
          sudo add-apt-repository ppa:jonathonf/golang -y
          sudo apt-get update -y
          #sudo apt-get install fwknop-client -y
-         sudo apt-get install golang-1.8 posgresql-client -y
+         sudo apt-get install golang-1.8 postgresql-client -y
          /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
       fi
 
       #na radnoj stanici bringout ne trebamo nginx, ni fknop client
-      #sudo sudo apt-key add /vagrant/nginx/nginx_signing.key
       #cp /vagrant/fwknop-client/fwknoprc_${LOCAL_IP} /home/vagrant/.fwknoprc
 
       #echo "fwknop -A tcp/22 --use-hmac -a ${LOCAL_IP} -n ${SERVER_IP}"
@@ -105,7 +107,7 @@ ws_provision_shell = <<-SHELL
       sudo /etc/rc.local
 
       # dok nemamo dns-a, podesavamo /etc/hosts
-      echo "127.0.0.1  bringout-ws-1" > /tmp/hosts.file
+      echo "127.0.0.1  bringout-ws-#{bout_ws}" > /tmp/hosts.file
 
       # start_chisel.sh pravi link via http/webproxy sa remote klijentskim servisima
       echo "#!/bin/bash" > /tmp/start_chisel.sh
@@ -132,11 +134,15 @@ ws_provision_shell = <<-SHELL
 
 SHELL
 
-
+return ws_provision_shell
+end
 
 rcli1_provision_shell = "SERVER_IP=#{SRV1_BOUT}\nLOCAL_IP=192.168.56.201\necho $SERVER_IP, $LOCAL_IP\n" + rcli_provision_shell
 rcli2_provision_shell = "SERVER_IP=#{SRV1_BOUT}\nLOCAL_IP=192.168.56.202\necho $SERVER_IP, $LOCAL_IP\n" + rcli_provision_shell
-wsbout1_provision_shell = "SERVER_IP=#{SRV1_BOUT}\n" + ws_provision_shell
+
+wsbout1_provision_shell = "SERVER_IP=#{SRV1_BOUT_INTERNAL}\n" + set_ws_provision_shell( "1" )
+wsbout2_provision_shell = "SERVER_IP=#{SRV1_BOUT_INTERNAL}\n" + set_ws_provision_shell( "2" )
+
 
 
 Vagrant.configure("2") do |config|
@@ -185,10 +191,14 @@ Vagrant.configure("2") do |config|
          #/home/vagrant/go/bin/chisel --version
       fi
 
-      sudo iptables -F
-      sudo iptables -A INPUT -i #{eth_filter} -p tcp --dport 22 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-      sudo iptables -A INPUT -i #{eth_filter} -p tcp --dport 22 -j DROP
-
+      echo "#/bin/sh" > /tmp/rc.local
+      echo "iptables -F" >> /tmp/rc.local
+      echo "iptables -A INPUT -i #{eth_filter} -p tcp --dport 22 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT" >> /tmp/rc.local
+      echo "iptables -A INPUT -i #{eth_filter} -p tcp --dport 22 -j DROP" >> /tmp/rc.local
+      sudo mv /tmp/rc.local /etc/rc.local
+      sudo chmod +x /etc/rc.local
+ 
+      sudo /etc/rc.local
       sudo iptables -L INPUT -v
 
       sudo cp /vagrant/fwknop-server/default /etc/default/fwknop-server
@@ -210,7 +220,6 @@ Vagrant.configure("2") do |config|
     rcli1.vm.hostname = 'remote-client-1'
 
     rcli1.vm.network :private_network, ip: LAN_BOUT + ".201"
-
     rcli1.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 256+128 ]
       v.customize ["modifyvm", :id, "--name", "remote-client-1"]
@@ -226,12 +235,10 @@ Vagrant.configure("2") do |config|
     rcli2.vm.hostname = 'remote-client-2'
 
     rcli2.vm.network :private_network, ip: LAN_BOUT + ".202"
-
     rcli2.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 256+128 ]
       v.customize ["modifyvm", :id, "--name", "remote-client-2"]
     end
-
     rcli2.vm.provision :shell, :privileged => false, inline: rcli2_provision_shell
     
   end
@@ -242,15 +249,27 @@ Vagrant.configure("2") do |config|
     ws.vm.hostname = 'bringout-ws-1'
 
     ws.vm.network :private_network, ip: LAN_BOUT_INTERNAL + ".201", netmask: "24"
-
     ws.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 256+128 ]
       v.customize ["modifyvm", :id, "--name", "bringout-ws-1"]
     end
-
     ws.vm.provision :shell, :privileged => false, inline: wsbout1_provision_shell
     
   end
+
+  config.vm.define "wsbout2" do |ws|
+    ws.vm.box = "ubuntu-16.04"
+    ws.vm.hostname = 'bringout-ws-2'
+
+    ws.vm.network :private_network, ip: LAN_BOUT_INTERNAL + ".202", netmask: "24"
+    ws.vm.provider :virtualbox do |v|
+      v.customize ["modifyvm", :id, "--memory", 256+128 ]
+      v.customize ["modifyvm", :id, "--name", "bringout-ws-2"]
+    end
+    ws.vm.provision :shell, :privileged => false, inline: wsbout2_provision_shell
+    
+  end
+
 
 
 end
