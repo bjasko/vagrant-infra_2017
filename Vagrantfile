@@ -68,9 +68,12 @@ rcli_provision_shell = <<-SHELL
       sudo su postgres -c "psql -h localhost -U postgres -W postgres < /vagrant/psql/psql_list_databases"
 
       sudo cp /vagrant/all/cre_sdb1_zfs.sh /usr/local/sbin/cre_sdb1_zfs.sh
+      sudo cp /vagrant/all/install_docker.sh /usr/local/sbin/install_docker.sh
+
       sudo chmod +x /usr/local/sbin/cre_sdb1_zfs.sh
       echo "#!/bin/sh"                  > /tmp/rc.local
       echo "/usr/local/sbin/cre_sdb1_zfs.sh" >> /tmp/rc.local
+      echo "/usr/local/sbin/install_docker.sh" >> /tmp/rc.local
       echo "exit 0"                     >> /tmp/rc.local
       sudo mv /tmp/rc.local /etc/rc.local
       sudo chmod +x /etc/rc.local
@@ -103,12 +106,17 @@ srv_bout_provision = <<-SHELL
 
    sudo cp /vagrant/all/cre_sdb1_zfs.sh /usr/local/sbin/cre_sdb1_zfs.sh
    sudo chmod +x /usr/local/sbin/cre_sdb1_zfs.sh
+   sudo cp /vagrant/all/install_docker.sh /usr/local/sbin/install_docker.sh
+   sudo chmod +x /usr/local/sbin/install_docker.sh
 
    echo "#/bin/sh" > /tmp/rc.local
    echo "iptables -F" >> /tmp/rc.local
    echo "iptables -A INPUT -i #{eth_filter} -p tcp --dport 22 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT" >> /tmp/rc.local
    echo "iptables -A INPUT -i #{eth_filter} -p tcp --dport 22 -j DROP" >> /tmp/rc.local
    echo "/usr/local/sbin/cre_sdb1_zfs.sh" >> /tmp/rc.local
+   echo "/usr/local/sbin/install_docker.sh" >> /tmp/rc.local
+   echo "exit 0" >> /tmp/rc.local
+   
    sudo mv /tmp/rc.local /etc/rc.local
    sudo chmod +x /etc/rc.local
  
