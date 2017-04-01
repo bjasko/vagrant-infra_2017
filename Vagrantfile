@@ -16,7 +16,7 @@ SRV1_BOUT_INTERNAL=LAN_BOUT_INTERNAL+".150"
 # remote client (server kod klijenta)
 rcli_provision_shell = <<-SHELL
 
-      if dpkg -s nginx 2>/dev/null 
+      if dpkg -s zfsutils-linux 2>/dev/null 
       then 
          echo all installed 
       else
@@ -26,9 +26,11 @@ rcli_provision_shell = <<-SHELL
          sudo apt-get update -y
          sudo add-apt-repository ppa:cipherdyne/fwknop -y
          sudo add-apt-repository ppa:jonathonf/golang -y
+         sudo add-apt-repository ppa:zfs-native/stable
          sudo apt-get update -y
          sudo apt-get install fwknop-client -y
          sudo apt-get install golang-1.8 -y
+         sudo apt-get install zfs -y
          sudo apt-get install autossh sshpass nginx postgresql -y
          /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
       fi
@@ -56,7 +58,7 @@ rcli_provision_shell = <<-SHELL
            sudo cp -av /vagrant/nginx/conf.d/chisel-rcli2.conf  /etc/nginx/conf.d/chisel-rcli2.conf 
            ;;
         *) 
-           echo "nepostejeci remote client?" 
+           echo "non existing remote client?" 
            ;;
       esac
       sudo service nginx restart
@@ -65,8 +67,67 @@ rcli_provision_shell = <<-SHELL
       sudo su postgres -c "psql < /vagrant/psql/psql_set_password"
       sudo su postgres -c "psql -h localhost -U postgres -W postgres < /vagrant/psql/psql_list_databases"
 
+      sudo cp /vagrant/all/cre_sdb1_zfs.sh /usr/local/sbin/cre_sdb1_zfs.sh
+      sudo chmod +x /usr/local/sbin/cre_sdb1_zfs.sh
+      echo "#!/bin/sh"                  > /tmp/rc.local
+      echo "/usr/local/sbin/cre_sdb1_zfs.sh" >> /tmp/rc.local
+      echo "exit 0"                     >> /tmp/rc.local
+      sudo mv /tmp/rc.local /etc/rc.local
+      sudo chmod +x /etc/rc.local
+      sudo /etc/rc.local
 
 SHELL
+
+
+srv_bout_provision = <<-SHELL
+
+  if dpkg -s zfsutils-linux 2>/dev/null 
+  then 
+       echo all installed 
+  else
+       sudo cp /vagrant/apt/sources.list /etc/apt/sources.list 
+       sudo sudo apt-key add /vagrant/nginx/nginx_signing.key
+       sudo add-apt-repository ppa:cipherdyne/fwknop -y
+       sudo add-apt-repository ppa:jonathonf/golang -y
+       sudo add-apt-repository ppa:zfs-native/stable
+      
+       sudo apt-get update -y
+       sudo apt-get install fwknop-server nginx -y
+       sudo apt-get install zfs -y
+    
+       sudo apt-get install golang-1.8 -y
+       /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
+       #/home/vagrant/go/bin/chisel --version
+
+   fi
+
+   sudo cp /vagrant/all/cre_sdb1_zfs.sh /usr/local/sbin/cre_sdb1_zfs.sh
+   sudo chmod +x /usr/local/sbin/cre_sdb1_zfs.sh
+
+   echo "#/bin/sh" > /tmp/rc.local
+   echo "iptables -F" >> /tmp/rc.local
+   echo "iptables -A INPUT -i #{eth_filter} -p tcp --dport 22 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT" >> /tmp/rc.local
+   echo "iptables -A INPUT -i #{eth_filter} -p tcp --dport 22 -j DROP" >> /tmp/rc.local
+   echo "/usr/local/sbin/cre_sdb1_zfs.sh" >> /tmp/rc.local
+   sudo mv /tmp/rc.local /etc/rc.local
+   sudo chmod +x /etc/rc.local
+ 
+   sudo /etc/rc.local
+   sudo iptables -L INPUT -v
+
+   sudo cp /vagrant/fwknop-server/default /etc/default/fwknop-server
+   sudo cp /vagrant/fwknop-server/access.conf /etc/fwknop/access.conf
+   sudo cp /vagrant/fwknop-server/fwknopd.conf /etc/fwknop/fwknopd.conf
+   sudo chmod 0600 /etc/fwknop/*
+
+   sudo service fwknop-server restart
+   #journalctl -u fwknop-server.service
+   sudo service fwknop-server status
+   sudo iptables -L
+SHELL
+
+
+
 
 def set_ws_provision_shell( bout_ws )
 
@@ -217,87 +278,68 @@ Vagrant.configure("2") do |config|
 
 
   # server 1 bringout cloud - data centar
-  config.vm.define "srv1bout" do |srv1bout|
-    srv1bout.vm.box = "ubuntu-16.04"
-    srv1bout.vm.hostname = 'bout-server-1'
+  config.vm.define "srv1bout" do |srv|
+    srv.vm.box = "ubuntu-16.04"
+    srv.vm.hostname = 'bout-server-1'
 
-    srv1bout.vm.network :private_network, ip: SRV1_BOUT, netmask: "24"
-    srv1bout.vm.network :private_network, ip: SRV1_BOUT_INTERNAL, netmask: "24"
+    srv.persistent_storage.enabled = true
+    srv.persistent_storage.location = "srv1bout.vdi"
+    srv.vm.box_check_update = false
 
-    srv1bout.vm.provider :virtualbox do |v|
+    srv.vm.network :private_network, ip: SRV1_BOUT, netmask: "24"
+    srv.vm.network :private_network, ip: SRV1_BOUT_INTERNAL, netmask: "24"
+
+    srv.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 512]
       v.customize ["modifyvm", :id, "--name", "bout-server-1" ]
     end
 
-    srv1bout.vm.provision :shell, :privileged => false,  inline: <<-SHELL
-
-      if dpkg -s nginx 2>/dev/null 
-      then 
-         echo all installed 
-      else
-         sudo add-apt-repository ppa:cipherdyne/fwknop -y
-         sudo add-apt-repository ppa:jonathonf/golang -y
-         sudo add-apt-repository ppa:ondrej/nginx -y
-         sudo apt-get update -y
-         sudo apt-get install fwknop-server nginx -y
-    
-         sudo apt-get install golang-1.8 -y
-         /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
-         #/home/vagrant/go/bin/chisel --version
-      fi
-
-      echo "#/bin/sh" > /tmp/rc.local
-      echo "iptables -F" >> /tmp/rc.local
-      echo "iptables -A INPUT -i #{eth_filter} -p tcp --dport 22 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT" >> /tmp/rc.local
-      echo "iptables -A INPUT -i #{eth_filter} -p tcp --dport 22 -j DROP" >> /tmp/rc.local
-      sudo mv /tmp/rc.local /etc/rc.local
-      sudo chmod +x /etc/rc.local
- 
-      sudo /etc/rc.local
-      sudo iptables -L INPUT -v
-
-      sudo cp /vagrant/fwknop-server/default /etc/default/fwknop-server
-      sudo cp /vagrant/fwknop-server/access.conf /etc/fwknop/access.conf
-      sudo cp /vagrant/fwknop-server/fwknopd.conf /etc/fwknop/fwknopd.conf
-      sudo chmod 0600 /etc/fwknop/*
-
-      sudo service fwknop-server restart
-      #journalctl -u fwknop-server.service
-      sudo service fwknop-server status
-      sudo iptables -L
-    SHELL
+    srv.vm.provision :shell, :privileged => false,  inline: srv_bout_provision 
 
   end
 
  
-  config.vm.define "rcli1" do |rcli1|
-    rcli1.vm.box = "ubuntu-16.04"
-    rcli1.vm.hostname = 'remote-client-1'
+  config.vm.define "rcli1" do |rcli|
 
-    rcli1.vm.network :private_network, ip: LAN_BOUT + ".201"
-    rcli1.vm.network :private_network, ip: LAN_CLI1 + ".201"
-    rcli1.vm.provider :virtualbox do |v|
+    rcli.persistent_storage.enabled = true
+    rcli.persistent_storage.location = "rcli1.vdi"
+    rcli.persistent_storage.filesystem = 'ext4'
+    rcli.persistent_storage.mountpoint = '/data'
+    rcli.vm.box_check_update = false
+
+    rcli.vm.box = "ubuntu-16.04"
+    rcli.vm.hostname = 'remote-client-1'
+
+    rcli.vm.network :private_network, ip: LAN_BOUT + ".201"
+    rcli.vm.network :private_network, ip: LAN_CLI1 + ".201"
+    rcli.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 256+128 ]
       v.customize ["modifyvm", :id, "--name", "remote-client-1"]
     end
 
-    rcli1.vm.provision :shell, :privileged => false, 
+    rcli.vm.provision :shell, :privileged => false, 
                        inline: rcli1_provision_shell 
   end
 
 
-  config.vm.define "rcli2" do |rcli2|
-    rcli2.vm.box = "ubuntu-16.04"
-    rcli2.vm.hostname = 'remote-client-2'
+  config.vm.define "rcli2" do |rcli|
+    rcli.vm.box = "ubuntu-16.04"
+    rcli.vm.hostname = 'remote-client-2'
 
-    rcli2.vm.network :private_network, ip: LAN_BOUT + ".202"
-    rcli1.vm.network :private_network, ip: LAN_CLI2 + ".202"
+    rcli.persistent_storage.enabled = true
+    rcli.persistent_storage.location = "rcli2.vdi"
+    rcli.persistent_storage.filesystem = 'ext4'
+    rcli.persistent_storage.mountpoint = '/data'
+    rcli.vm.box_check_update = false
 
-    rcli2.vm.provider :virtualbox do |v|
+    rcli.vm.network :private_network, ip: LAN_BOUT + ".202"
+    rcli.vm.network :private_network, ip: LAN_CLI2 + ".202"
+
+    rcli.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 256+128 ]
       v.customize ["modifyvm", :id, "--name", "remote-client-2"]
     end
-    rcli2.vm.provision :shell, :privileged => false, inline: rcli2_provision_shell
+    rcli.vm.provision :shell, :privileged => false, inline: rcli2_provision_shell
     
   end
 
