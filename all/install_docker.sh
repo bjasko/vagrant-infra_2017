@@ -1,10 +1,6 @@
 #!/bin/bash
 
 if dpkg -s docker-ce > /dev/null
-then
-  echo docker already installed
-#  exit 0
-fi
 
 sudo apt-get install \
 	apt-transport-https \
@@ -32,6 +28,10 @@ sudo apt-get install python-pip -y
 sudo pip install --upgrade pip 
 sudo pip uninstall -y docker docker-py
 sudo pip install docker docker-compose
+
+then
+  echo docker already installed
+fi
 
 docker --version
 docker-compose --version
