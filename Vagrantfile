@@ -16,122 +16,11 @@ SRV1_BOUT_INTERNAL=LAN_BOUT_INTERNAL+".150"
 # remote client (server kod klijenta)
 rcli_provision_shell = <<-SHELL
 
-      if dpkg -s zfsutils-linux 2>/dev/null 
-      then 
-         echo all installed 
-      else
-         # contains nginx mainline repos
-         sudo cp /vagrant/apt/sources.list /etc/apt/sources.list 
-         sudo sudo apt-key add /vagrant/nginx/nginx_signing.key
-         sudo apt-get update -y
-         sudo add-apt-repository ppa:cipherdyne/fwknop -y
-         sudo add-apt-repository ppa:jonathonf/golang -y
-         sudo add-apt-repository ppa:zfs-native/stable
-         sudo apt-get update -y
-         sudo apt-get install fwknop-client -y
-         sudo apt-get install golang-1.8 -y
-         sudo apt-get install zfs -y
-         sudo apt-get install autossh sshpass nginx postgresql -y
-         /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
-      fi
-
-      cp /vagrant/fwknop-client/fwknoprc_${LOCAL_IP} /home/vagrant/.fwknoprc
-
-      echo "fwknop -A tcp/22 --use-hmac -a ${LOCAL_IP} -n ${SERVER_IP}"
-      fwknop -A tcp/22 --use-hmac -a ${LOCAL_IP} -n ${SERVER_IP}
-      echo passwordless ssh srv1bout
-      [ -f /home/vagrant/.ssh/id_rsa ] || ssh-keygen -P "" -C "test" -f /home/vagrant/.ssh/id_rsa
-      sshpass -f /vagrant/ssh_password.txt ssh-copy-id -o StrictHostKeyChecking=no vagrant@${SERVER_IP}
-
-      ssh vagrant@${SERVER_IP} uname -a
-
-
-      echo "Updating nginx configuration"
-      sudo cp /vagrant/nginx/nginx.conf /etc/nginx/nginx.conf
-      case $LOCAL_IP in
-        *201) 
-	   echo "chisel rcli1"
-           sudo cp -av /vagrant/nginx/conf.d/chisel-rcli1.conf  /etc/nginx/conf.d/chisel-rcli1.conf 
-           ;;
-        *202) 
-	   echo "chisel rcli2"
-           sudo cp -av /vagrant/nginx/conf.d/chisel-rcli2.conf  /etc/nginx/conf.d/chisel-rcli2.conf 
-           ;;
-        *) 
-           echo "non existing remote client?" 
-           ;;
-      esac
-      sudo service nginx restart
-      sudo service nginx status
-
-      sudo su postgres -c "psql < /vagrant/psql/psql_set_password"
-      sudo su postgres -c "psql -h localhost -U postgres -W postgres < /vagrant/psql/psql_list_databases"
-
-      sudo cp /vagrant/all/cre_sdb1_zfs.sh /usr/local/sbin/cre_sdb1_zfs.sh
-      sudo cp /vagrant/all/install_docker.sh /usr/local/sbin/install_docker.sh
-
-      sudo chmod +x /usr/local/sbin/cre_sdb1_zfs.sh
-      echo "#!/bin/sh"                  > /tmp/rc.local
-      echo "/usr/local/sbin/cre_sdb1_zfs.sh" >> /tmp/rc.local
-      echo "/usr/local/sbin/install_docker.sh" >> /tmp/rc.local
-      echo "exit 0"                     >> /tmp/rc.local
-      sudo mv /tmp/rc.local /etc/rc.local
-      sudo chmod +x /etc/rc.local
-      sudo /etc/rc.local
-
 SHELL
 
 
 srv_bout_provision = <<-SHELL
 
-  if dpkg -s zfsutils-linux 2>/dev/null 
-  then 
-       echo all installed 
-  else
-       sudo cp /vagrant/apt/sources.list /etc/apt/sources.list 
-       sudo sudo apt-key add /vagrant/nginx/nginx_signing.key
-       sudo add-apt-repository ppa:cipherdyne/fwknop -y
-       sudo add-apt-repository ppa:jonathonf/golang -y
-       sudo add-apt-repository ppa:zfs-native/stable
-      
-       sudo apt-get update -y
-       sudo apt-get install fwknop-server nginx -y
-       sudo apt-get install zfs -y
-    
-       sudo apt-get install golang-1.8 -y
-       /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
-       #/home/vagrant/go/bin/chisel --version
-
-   fi
-
-   sudo cp /vagrant/all/cre_sdb1_zfs.sh /usr/local/sbin/cre_sdb1_zfs.sh
-   sudo chmod +x /usr/local/sbin/cre_sdb1_zfs.sh
-   sudo cp /vagrant/all/install_docker.sh /usr/local/sbin/install_docker.sh
-   sudo chmod +x /usr/local/sbin/install_docker.sh
-
-   echo "#/bin/sh" > /tmp/rc.local
-   echo "iptables -F" >> /tmp/rc.local
-   echo "iptables -A INPUT -i #{eth_filter} -p tcp --dport 22 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT" >> /tmp/rc.local
-   echo "iptables -A INPUT -i #{eth_filter} -p tcp --dport 22 -j DROP" >> /tmp/rc.local
-   echo "/usr/local/sbin/cre_sdb1_zfs.sh" >> /tmp/rc.local
-   echo "/usr/local/sbin/install_docker.sh" >> /tmp/rc.local
-   echo "exit 0" >> /tmp/rc.local
-   
-   sudo mv /tmp/rc.local /etc/rc.local
-   sudo chmod +x /etc/rc.local
- 
-   sudo /etc/rc.local
-   sudo iptables -L INPUT -v
-
-   sudo cp /vagrant/fwknop-server/default /etc/default/fwknop-server
-   sudo cp /vagrant/fwknop-server/access.conf /etc/fwknop/access.conf
-   sudo cp /vagrant/fwknop-server/fwknopd.conf /etc/fwknop/fwknopd.conf
-   sudo chmod 0600 /etc/fwknop/*
-
-   sudo service fwknop-server restart
-   #journalctl -u fwknop-server.service
-   sudo service fwknop-server status
-   sudo iptables -L
 SHELL
 
 
@@ -141,67 +30,6 @@ def set_ws_provision_shell( bout_ws )
 
 # bringout workstation
 ws_provision_shell = <<-SHELL
-
-      if dpkg -s golang-1.8 2>/dev/null && dpkg -s pogresql-client>/dev/null 
-      then 
-         echo all installed 
-      else
-         # contains nginx mainline repos
-         sudo cp /vagrant/apt/sources.list /etc/apt/sources.list 
-         sudo sudo apt-key add /vagrant/nginx/nginx_signing.key
-         sudo add-apt-repository ppa:cipherdyne/fwknop -y
-         sudo add-apt-repository ppa:jonathonf/golang -y
-         sudo apt-get update -y
-         #sudo apt-get install fwknop-client -y
-         sudo apt-get install golang-1.8 postgresql-client -y
-         /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
-      fi
-
-      #na radnoj stanici bringout ne trebamo nginx, ni fknop client
-      #cp /vagrant/fwknop-client/fwknoprc_${LOCAL_IP} /home/vagrant/.fwknoprc
-
-      #echo "fwknop -A tcp/22 --use-hmac -a ${LOCAL_IP} -n ${SERVER_IP}"
-      #fwknop -A tcp/22 --use-hmac -a ${LOCAL_IP} -n ${SERVER_IP}
-      #echo passwordless ssh srv1bout
-      #[ -f /home/vagrant/.ssh/id_rsa ] || ssh-keygen -P "" -C "test" -f /home/vagrant/.ssh/id_rsa
-      #sshpass -f /vagrant/ssh_password.txt ssh-copy-id -o StrictHostKeyChecking=no vagrant@${SERVER_IP}
-
-      #ssh vagrant@${SERVER_IP} uname -a
-
-      echo namjerno rutu LAN_BOUT: #{LAN_BOUT} disableujemo na radnim stanicama
-      echo tako da smo sigurno da one samo preko internog lan-a #{LAN_BOUT_INTERNAL} komuniciraju sa serverom
-      echo "#!/bin/sh" > /tmp/rc.local
-      echo "ip route add #{LAN_BOUT}.0/24 dev enp0s8" >> /tmp/rc.local
-      echo "echo end of rc.local" >> /tmp/rc.local
-      sudo mv /tmp/rc.local /etc/rc.local
-      sudo chmod +x /etc/rc.local
-      sudo /etc/rc.local
-
-      # dok nemamo dns-a, podesavamo /etc/hosts
-      echo "127.0.0.1  bringout-ws-#{bout_ws}" > /tmp/hosts.file
-
-      # start_chisel.sh pravi link via http/webproxy sa remote klijentskim servisima
-      echo "#!/bin/bash" > /tmp/start_chisel.sh
-      echo "killall chisel" >> /tmp/start_chisel.sh
-
-      echo "127.0.0.1       localhost" >> /tmp/hosts.file
-      echo "::1     localhost ip6-localhost ip6-loopback" >> /tmp/hosts.file
-      echo "ff02::1 ip6-allnodes" >> /tmp/hosts.file
-      echo "ff02::2 ip6-allrouters" >> /tmp/hosts.file
-      for cli_no in 1 2
-      do
-	  echo "#{SRV1_BOUT_INTERNAL} remote-client-${cli_no} remote-client-${cli_no}.#{BOUT_DOMAIN}"  >> /tmp/hosts.file
-	  echo "echo \"na localhostu se aktiviraju portovi  220${cli_no} - ssh, 520${cli_no} - psql za pristup remote-client-${cli_no}\"" >> /tmp/start_chisel.sh
-	  echo "echo \"test servisa:\"" >> /tmp/start_chisel.sh
-          echo "echo \"psql -p 520${cli_no} -h localhost -U postgres -W postgres\"" >> /tmp/start_chisel.sh
-          echo "echo \"postgresql password: test01\"" >> /tmp/start_chisel.sh
-          echo "echo \"ssh -p 220${cli_no} vagrant@localhost\"" >> /tmp/start_chisel.sh
-	  echo "~/go/bin/chisel client http://remote-client-${cli_no}.#{BOUT_DOMAIN} 220${cli_no}:22 520${cli_no}:5432>/tmp/chisel.log &" >> /tmp/start_chisel.sh
-      done
-      sudo mv /tmp/hosts.file /etc/hosts
-
-      mv /tmp/start_chisel.sh /home/vagrant/
-      chmod +x /home/vagrant/start_chisel.sh
 
 SHELL
 
@@ -214,48 +42,6 @@ def set_wscli_provision_shell( cli_no, ws_no )
 # client workstation
 ws_provision_shell = <<-SHELL
 
-      if dpkg -s golang-1.8 2>/dev/null && dpkg -s pogresql-client>/dev/null 
-      then 
-         echo all installed 
-      else
-         # contains nginx mainline repos
-         sudo cp /vagrant/apt/sources.list /etc/apt/sources.list 
-         sudo sudo apt-key add /vagrant/nginx/nginx_signing.key
-         sudo add-apt-repository ppa:jonathonf/golang -y
-         sudo apt-get update -y
-         sudo apt-get install golang-1.8 postgresql-client -y
-         /usr/lib/go-1.8/bin/go get -v github.com/jpillora/chisel
-      fi
-
-      echo namjerno rute LAN_BOUT: #{LAN_BOUT}, kao i lan drugih klijenata disableujemo na radnim stanicama
-      echo tako da smo sigurno da one samo preko internog lan-a #{LAN_BOUT_INTERNAL} komuniciraju sa serverom
-      echo "#!/bin/sh" > /tmp/rc.local
-      echo "ip route add #{LAN_BOUT}.0/24 dev enp0s8" >> /tmp/rc.local
-      echo "ip route add #{LAN_BOUT_INTERNAL}.0/23 dev enp0s8" >> /tmp/rc.local
-      if [ "#{cli_no}" == "1" ] ; then
-       echo "ip route add #{LAN_CLI2}.0/24 dev enp0s8" >> /tmp/rc.local
-      else
-       echo "ip route add #{LAN_CLI1}.0/24 dev enp0s8" >> /tmp/rc.local
-      fi
-      echo "echo end of rc.local" >> /tmp/rc.local
-      sudo mv /tmp/rc.local /etc/rc.local
-      sudo chmod +x /etc/rc.local
-      sudo /etc/rc.local
-
-      # dok nemamo dns-a, podesavamo /etc/hosts
-      echo "127.0.0.1  ws-#{ws_no}-client-#{cli_no}" > /tmp/hosts.file
-
-      # start_chisel.sh pravi link via http/webproxy sa remote klijentskim servisima
-      echo "#!/bin/bash" > /tmp/start_chisel.sh
-      echo "killall chisel" >> /tmp/start_chisel.sh
-
-      echo "127.0.0.1       localhost" >> /tmp/hosts.file
-      echo "::1     localhost ip6-localhost ip6-loopback" >> /tmp/hosts.file
-      echo "ff02::1 ip6-allnodes" >> /tmp/hosts.file
-      echo "ff02::2 ip6-allrouters" >> /tmp/hosts.file
-      sudo mv /tmp/hosts.file /etc/hosts
-
-      mv /tmp/start_chisel.sh /home/vagrant/
 SHELL
 
 return ws_provision_shell
@@ -274,7 +60,7 @@ Vagrant.configure("2") do |config|
 
   # server 1 public cloud
   config.vm.define "srv1pubcloud" do | srv1pubcloud |
-    srv1pubcloud.vm.box = "ubuntu-16.04"
+    srv1pubcloud.vm.box = "greenbox"
     srv1pubcloud.vm.hostname = 'pub-cloud-server-1'
     srv1pubcloud.vm.network :private_network, ip: LAN_BOUT+".100"
 
@@ -287,12 +73,12 @@ Vagrant.configure("2") do |config|
 
   # server 1 bringout cloud - data centar
   config.vm.define "srv1bout" do |srv|
-    srv.vm.box = "ubuntu-16.04"
+    srv.vm.box = "greenbox"
     srv.vm.hostname = 'bout-server-1'
 
-    srv.persistent_storage.enabled = true
-    srv.persistent_storage.location = "srv1bout.vdi"
-    srv.vm.box_check_update = false
+    #srv.persistent_storage.enabled = true
+    #srv.persistent_storage.location = "srv1bout.vdi"
+    #srv.vm.box_check_update = false
 
     srv.vm.network :private_network, ip: SRV1_BOUT, netmask: "24"
     srv.vm.network :private_network, ip: SRV1_BOUT_INTERNAL, netmask: "24"
@@ -309,13 +95,13 @@ Vagrant.configure("2") do |config|
  
   config.vm.define "rcli1" do |rcli|
 
-    rcli.persistent_storage.enabled = true
-    rcli.persistent_storage.location = "rcli1.vdi"
-    rcli.persistent_storage.filesystem = 'ext4'
-    rcli.persistent_storage.mountpoint = '/data'
-    rcli.vm.box_check_update = false
+    #rcli.persistent_storage.enabled = true
+    #rcli.persistent_storage.location = "rcli1.vdi"
+    #rcli.persistent_storage.filesystem = 'ext4'
+    #rcli.persistent_storage.mountpoint = '/data'
+    #rcli.vm.box_check_update = false
 
-    rcli.vm.box = "ubuntu-16.04"
+    rcli.vm.box = "greenbox"
     rcli.vm.hostname = 'remote-client-1'
 
     rcli.vm.network :private_network, ip: LAN_BOUT + ".201"
@@ -331,7 +117,7 @@ Vagrant.configure("2") do |config|
 
 
   config.vm.define "rcli2" do |rcli|
-    rcli.vm.box = "ubuntu-16.04"
+    rcli.vm.box = "greenbox"
     rcli.vm.hostname = 'remote-client-2'
 
     rcli.persistent_storage.enabled = true
@@ -353,7 +139,7 @@ Vagrant.configure("2") do |config|
 
 
   config.vm.define "wsbout1" do |ws|
-    ws.vm.box = "ubuntu-16.04"
+    ws.vm.box = "greenbox"
     ws.vm.hostname = 'bringout-ws-1'
 
     ws.vm.network :private_network, ip: LAN_BOUT_INTERNAL + ".201", netmask: "24"
@@ -366,7 +152,7 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.define "wsbout2" do |ws|
-    ws.vm.box = "ubuntu-16.04"
+    ws.vm.box = "greenbox"
     ws.vm.hostname = 'bringout-ws-2'
 
     ws.vm.network :private_network, ip: LAN_BOUT_INTERNAL + ".202", netmask: "24"
@@ -381,7 +167,7 @@ Vagrant.configure("2") do |config|
 
 
   config.vm.define "ws1cli1" do |ws|
-    ws.vm.box = "ubuntu-16.04"
+    ws.vm.box = "greenbox"
     ws.vm.hostname = 'ws-1-cli-1'
 
     ws.vm.network :private_network, ip: LAN_CLI1 + ".101", netmask: "24"
