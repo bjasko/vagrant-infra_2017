@@ -41,11 +41,11 @@ def set_wscli_provision_shell( cli_no, ws_no )
 
 # client workstation
 ws_provision_shell = <<-SHELL
-
+echo "hello world #{cli_no}, #{ws_no} "
 SHELL
 
 return ws_provision_shell
-e
+
 end
 
 rcli1_provision_shell = "SERVER_IP=#{SRV1_BOUT}\nLOCAL_IP=192.168.56.201\necho $SERVER_IP, $LOCAL_IP\n" + rcli_provision_shell
@@ -80,8 +80,8 @@ Vagrant.configure("2") do |config|
     #srv.persistent_storage.location = "srv1bout.vdi"
     #srv.vm.box_check_update = false
 
-    srv.vm.network :private_network, ip: SRV1_BOUT, netmask: "24"
-    srv.vm.network :private_network, ip: SRV1_BOUT_INTERNAL, netmask: "24"
+    srv.vm.network :private_network, ip: SRV1_BOUT
+    srv.vm.network :private_network, ip: SRV1_BOUT_INTERNAL
 
     srv.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 512]
@@ -120,11 +120,11 @@ Vagrant.configure("2") do |config|
     rcli.vm.box = "greenbox"
     rcli.vm.hostname = 'remote-client-2'
 
-    rcli.persistent_storage.enabled = true
-    rcli.persistent_storage.location = "rcli2.vdi"
-    rcli.persistent_storage.filesystem = 'ext4'
-    rcli.persistent_storage.mountpoint = '/data'
-    rcli.vm.box_check_update = false
+    #rcli.persistent_storage.enabled = true
+    #rcli.persistent_storage.location = "rcli2.vdi"
+    #rcli.persistent_storage.filesystem = 'ext4'
+    #rcli.persistent_storage.mountpoint = '/data'
+    #rcli.vm.box_check_update = false
 
     rcli.vm.network :private_network, ip: LAN_BOUT + ".202"
     rcli.vm.network :private_network, ip: LAN_CLI2 + ".202"
@@ -142,7 +142,7 @@ Vagrant.configure("2") do |config|
     ws.vm.box = "greenbox"
     ws.vm.hostname = 'bringout-ws-1'
 
-    ws.vm.network :private_network, ip: LAN_BOUT_INTERNAL + ".201", netmask: "24"
+    ws.vm.network :private_network, ip: LAN_BOUT_INTERNAL + ".201"   #, netmask: "24"
     ws.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 256+128 ]
       v.customize ["modifyvm", :id, "--name", "bringout-ws-1"]
@@ -155,7 +155,7 @@ Vagrant.configure("2") do |config|
     ws.vm.box = "greenbox"
     ws.vm.hostname = 'bringout-ws-2'
 
-    ws.vm.network :private_network, ip: LAN_BOUT_INTERNAL + ".202", netmask: "24"
+    ws.vm.network :private_network, ip: LAN_BOUT_INTERNAL + ".202"   #, netmask: "24"
     ws.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 256+128 ]
       v.customize ["modifyvm", :id, "--name", "bringout-ws-2"]
