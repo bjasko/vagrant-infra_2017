@@ -86,7 +86,7 @@ Vagrant.configure("2") do |config|
 
     srv.vm.network :private_network, ip: SRV1_BOUT
     srv.vm.network :private_network, ip: SRV1_BOUT_INTERNAL
-    srv.vm.network :private_network, ip: LAN_VPN+".1"
+    srv.vm.network :private_network, ip: LAN_VPN+".10"
 
     srv.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 512]
