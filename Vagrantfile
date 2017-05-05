@@ -141,7 +141,7 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--name", "remote-client-2"]
     end
     rcli.vm.provision :shell, :privileged => false, inline: rcli2_provision_shell
-    
+    rcli.vm.provision :shell, :privileged => true, :path => "./firewall.sh"
   end
 
 
@@ -184,6 +184,7 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--vrdeport", 50001 ]
     end
     ws.vm.provision :shell, :privileged => false, inline: ws1cli1_provision_shell
+    ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
   end
 
 
@@ -198,6 +199,7 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--vrdeport", 50001 ]
     end
     ws.vm.provision :shell, :privileged => false, inline: ws1cli2_provision_shell
+    ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
   end
 
 
