@@ -9,6 +9,7 @@ LAN_BOUT="192.168.56"
 LAN_CLI1="192.168.1"
 LAN_CLI2="192.168.2"
 LAN_BOUT_INTERNAL="192.168.0"
+LAN_VPN="10.0.200"
 
 SRV1_BOUT=LAN_BOUT+".150"
 SRV1_BOUT_INTERNAL=LAN_BOUT_INTERNAL+".150"
@@ -55,6 +56,7 @@ wsbout1_provision_shell = "SERVER_IP=#{SRV1_BOUT_INTERNAL}\n" + set_ws_provision
 wsbout2_provision_shell = "SERVER_IP=#{SRV1_BOUT_INTERNAL}\n" + set_ws_provision_shell( "2" )
 
 ws1cli1_provision_shell = set_wscli_provision_shell( "1", "1" )
+ws1cli2_provision_shell = set_wscli_provision_shell( "2", "1" )
 
 Vagrant.configure("2") do |config|
 
@@ -63,6 +65,8 @@ Vagrant.configure("2") do |config|
     srv1pubcloud.vm.box = "greenbox"
     srv1pubcloud.vm.hostname = 'pub-cloud-server-1'
     srv1pubcloud.vm.network :private_network, ip: LAN_BOUT+".100"
+    srv1pubcloud.vm.network :private_network, ip: LAN_VPN+".254"
+
 
     srv1pubcloud.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 512]
@@ -82,6 +86,7 @@ Vagrant.configure("2") do |config|
 
     srv.vm.network :private_network, ip: SRV1_BOUT
     srv.vm.network :private_network, ip: SRV1_BOUT_INTERNAL
+    srv.vm.network :private_network, ip: LAN_VPN+".1"
 
     srv.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 512]
@@ -106,6 +111,7 @@ Vagrant.configure("2") do |config|
 
     rcli.vm.network :private_network, ip: LAN_BOUT + ".201"
     rcli.vm.network :private_network, ip: LAN_CLI1 + ".201"
+    rcli.vm.network :private_network, ip: LAN_VPN+".101"
     rcli.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 256+128 ]
       v.customize ["modifyvm", :id, "--name", "remote-client-1"]
@@ -128,6 +134,7 @@ Vagrant.configure("2") do |config|
 
     rcli.vm.network :private_network, ip: LAN_BOUT + ".202"
     rcli.vm.network :private_network, ip: LAN_CLI2 + ".202"
+    rcli.vm.network :private_network, ip: LAN_VPN+".102"
 
     rcli.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 384 ]
@@ -174,8 +181,23 @@ Vagrant.configure("2") do |config|
     ws.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 384 ]
       v.customize ["modifyvm", :id, "--name", "ws-1-cli-1"]
+      v.customize ["modifyvm", :id, "--vrdeport", 50001 ]
     end
     ws.vm.provision :shell, :privileged => false, inline: ws1cli1_provision_shell
+  end
+
+
+  config.vm.define "ws1cli2" do |ws|
+    ws.vm.box = "greenbox"
+    ws.vm.hostname = 'ws-1-cli-2'
+
+    ws.vm.network :private_network, ip: LAN_CLI2 + ".101"  #, netmask: "24"
+    ws.vm.provider :virtualbox do |v|
+      v.customize ["modifyvm", :id, "--memory", 384 ]
+      v.customize ["modifyvm", :id, "--name", "ws-1-cli-2"]
+      v.customize ["modifyvm", :id, "--vrdeport", 50001 ]
+    end
+    ws.vm.provision :shell, :privileged => false, inline: ws1cli2_provision_shell
   end
 
 
