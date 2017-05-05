@@ -15,12 +15,13 @@ SRV1_BOUT_INTERNAL=LAN_BOUT_INTERNAL+".150"
 
 # remote client (server kod klijenta)
 rcli_provision_shell = <<-SHELL
-
+echo "hello remote client" 
+hostname
 SHELL
 
 
 srv_bout_provision = <<-SHELL
-
+echo "hello world from srv1bout"
 SHELL
 
 
@@ -30,7 +31,7 @@ def set_ws_provision_shell( bout_ws )
 
 # bringout workstation
 ws_provision_shell = <<-SHELL
-
+echo "hello bout_ws"
 SHELL
 
 return ws_provision_shell
@@ -45,7 +46,6 @@ echo "hello world #{cli_no}, #{ws_no} "
 SHELL
 
 return ws_provision_shell
-
 end
 
 rcli1_provision_shell = "SERVER_IP=#{SRV1_BOUT}\nLOCAL_IP=192.168.56.201\necho $SERVER_IP, $LOCAL_IP\n" + rcli_provision_shell
@@ -130,7 +130,7 @@ Vagrant.configure("2") do |config|
     rcli.vm.network :private_network, ip: LAN_CLI2 + ".202"
 
     rcli.vm.provider :virtualbox do |v|
-      v.customize ["modifyvm", :id, "--memory", 256+128 ]
+      v.customize ["modifyvm", :id, "--memory", 384 ]
       v.customize ["modifyvm", :id, "--name", "remote-client-2"]
     end
     rcli.vm.provision :shell, :privileged => false, inline: rcli2_provision_shell
@@ -144,7 +144,7 @@ Vagrant.configure("2") do |config|
 
     ws.vm.network :private_network, ip: LAN_BOUT_INTERNAL + ".201"   #, netmask: "24"
     ws.vm.provider :virtualbox do |v|
-      v.customize ["modifyvm", :id, "--memory", 256+128 ]
+      v.customize ["modifyvm", :id, "--memory", 512 ]
       v.customize ["modifyvm", :id, "--name", "bringout-ws-1"]
     end
     ws.vm.provision :shell, :privileged => false, inline: wsbout1_provision_shell
@@ -157,7 +157,7 @@ Vagrant.configure("2") do |config|
 
     ws.vm.network :private_network, ip: LAN_BOUT_INTERNAL + ".202"   #, netmask: "24"
     ws.vm.provider :virtualbox do |v|
-      v.customize ["modifyvm", :id, "--memory", 256+128 ]
+      v.customize ["modifyvm", :id, "--memory", 384 ]
       v.customize ["modifyvm", :id, "--name", "bringout-ws-2"]
     end
     ws.vm.provision :shell, :privileged => false, inline: wsbout2_provision_shell
@@ -170,13 +170,12 @@ Vagrant.configure("2") do |config|
     ws.vm.box = "greenbox"
     ws.vm.hostname = 'ws-1-cli-1'
 
-    ws.vm.network :private_network, ip: LAN_CLI1 + ".101", netmask: "24"
+    ws.vm.network :private_network, ip: LAN_CLI1 + ".101"  #, netmask: "24"
     ws.vm.provider :virtualbox do |v|
-      v.customize ["modifyvm", :id, "--memory", 256 ]
+      v.customize ["modifyvm", :id, "--memory", 384 ]
       v.customize ["modifyvm", :id, "--name", "ws-1-cli-1"]
     end
     ws.vm.provision :shell, :privileged => false, inline: ws1cli1_provision_shell
-    
   end
 
 
