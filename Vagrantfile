@@ -72,6 +72,8 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--memory", 512]
       v.customize ["modifyvm", :id, "--name", "pub-cloud-server-1" ]
     end
+
+    srv1pubcloud.vm.provision :shell, :privileged => true, :path => "./firewall.sh"
   end
 
 
@@ -94,7 +96,7 @@ Vagrant.configure("2") do |config|
     end
 
     srv.vm.provision :shell, :privileged => false,  inline: srv_bout_provision 
-
+    srv.vm.provision :shell, :privileged => true, :path => "./firewall.sh"
   end
 
  
@@ -119,6 +121,7 @@ Vagrant.configure("2") do |config|
 
     rcli.vm.provision :shell, :privileged => false, 
                        inline: rcli1_provision_shell 
+    rcli.vm.provision :shell, :privileged => true, :path => "./firewall.sh"
   end
 
 
@@ -155,6 +158,7 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--name", "bringout-ws-1"]
     end
     ws.vm.provision :shell, :privileged => false, inline: wsbout1_provision_shell
+    ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
     
   end
 
@@ -168,6 +172,7 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--name", "bringout-ws-2"]
     end
     ws.vm.provision :shell, :privileged => false, inline: wsbout2_provision_shell
+    ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
     
   end
 
@@ -196,7 +201,7 @@ Vagrant.configure("2") do |config|
     ws.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 384 ]
       v.customize ["modifyvm", :id, "--name", "ws-1-cli-2"]
-      v.customize ["modifyvm", :id, "--vrdeport", 50001 ]
+      v.customize ["modifyvm", :id, "--vrdeport", 50002 ]
     end
     ws.vm.provision :shell, :privileged => false, inline: ws1cli2_provision_shell
     ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
