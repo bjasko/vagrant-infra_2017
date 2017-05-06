@@ -210,6 +210,7 @@ Vagrant.configure("2") do |config|
     end
     ws.vm.provision :shell, :privileged => false, inline: ws1cli2_provision_shell
     ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
+    ws.vm.provision :shell, :privileged => false, :path => "ubuntu-desktop-12.04/setup.sh" 
   end
 
 
