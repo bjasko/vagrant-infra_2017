@@ -191,13 +191,13 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--clipboard", "bidirectional" ]
     end
     ws.vm.provision :shell, :privileged => false, inline: ws1cli1_provision_shell
-    ws.vm.provision :shell, :privileged => false, :path => "ubuntu-desktop-16.04/setup.sh" 
     ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
+    ws.vm.provision :shell, :privileged => false, :path => "ubuntu-desktop-16.04/setup.sh" 
   end
 
 
   config.vm.define "ws1cli2" do |ws|
-    ws.vm.box = "greenbox"
+    ws.vm.box = "ubuntu-desktop-12.04-i386"
     ws.vm.hostname = 'ws-1-cli-2'
 
     ws.vm.network :private_network, ip: LAN_CLI2 + ".101"  #, netmask: "24"
