@@ -57,6 +57,12 @@ wsbout2_provision_shell = "SERVER_IP=#{SRV1_BOUT_INTERNAL}\n" + set_ws_provision
 
 ws1cli1_provision_shell = set_wscli_provision_shell( "1", "1" )
 ws1cli2_provision_shell = set_wscli_provision_shell( "2", "1" )
+ws2cli2_provision_shell = <<-SHELL
+echo "windows"
+C:
+cd \\
+dir
+SHELL
 
 Vagrant.configure("2") do |config|
 
@@ -213,5 +219,21 @@ Vagrant.configure("2") do |config|
     ws.vm.provision :shell, :privileged => false, :path => "ubuntu-desktop-12.04/setup.sh" 
   end
 
+
+  config.vm.define "ws2cli2" do |ws|
+    ws.vm.box = "W7-msys2"
+    ws.vm.hostname = 'ws-2-cli-2'
+
+    ws.vm.network :private_network, ip: LAN_CLI2 + ".102"  #, netmask: "24"
+    ws.vm.provider :virtualbox do |v|
+      v.customize ["modifyvm", :id, "--memory", 384 ]
+      v.customize ["modifyvm", :id, "--vrde", "on" ]
+      v.customize ["modifyvm", :id, "--name", "ws-2-cli-2"]
+      v.customize ["modifyvm", :id, "--vrdeport", 50003 ]
+      v.customize ["modifyvm", :id, "--clipboard", "bidirectional" ]
+    end
+    ws.vm.provision :shell, :privileged => false, inline: ws2cli2_provision_shell
+    #ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
+  end
 
 end
