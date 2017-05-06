@@ -179,16 +179,19 @@ Vagrant.configure("2") do |config|
 
 
   config.vm.define "ws1cli1" do |ws|
-    ws.vm.box = "greenbox"
+    ws.vm.box = "ubuntu-desktop-16.04-i386"
     ws.vm.hostname = 'ws-1-cli-1'
 
     ws.vm.network :private_network, ip: LAN_CLI1 + ".101"  #, netmask: "24"
     ws.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 384 ]
       v.customize ["modifyvm", :id, "--name", "ws-1-cli-1"]
+      v.customize ["modifyvm", :id, "--vrde", "on" ]
       v.customize ["modifyvm", :id, "--vrdeport", 50001 ]
+      v.customize ["modifyvm", :id, "--clipboard", "bidirectional" ]
     end
     ws.vm.provision :shell, :privileged => false, inline: ws1cli1_provision_shell
+    ws.vm.provision :shell, :privileged => false, :path => "ubuntu-desktop-16.04/setup.sh" 
     ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
   end
 
@@ -200,8 +203,10 @@ Vagrant.configure("2") do |config|
     ws.vm.network :private_network, ip: LAN_CLI2 + ".101"  #, netmask: "24"
     ws.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--memory", 384 ]
+      v.customize ["modifyvm", :id, "--vrde", "on" ]
       v.customize ["modifyvm", :id, "--name", "ws-1-cli-2"]
       v.customize ["modifyvm", :id, "--vrdeport", 50002 ]
+      v.customize ["modifyvm", :id, "--clipboard", "bidirectional" ]
     end
     ws.vm.provision :shell, :privileged => false, inline: ws1cli2_provision_shell
     ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
