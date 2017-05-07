@@ -5,7 +5,7 @@ cd /vagrant/ubuntu-desktop-16.04
 
 # https://askubuntu.com/questions/426831/lxde-auto-login
 
-sudo cp -av  lightdm.conf /etc/lightdm/
+#sudo cp -av  lightdm.conf /etc/lightdm/
 #sudo service lightdm restart
 
 if [ ! -f /home/vagrant/Desktop/lxterminal.desktop ]
@@ -18,5 +18,5 @@ then
   #sudo systemctl stop lightdm.service
   #sudo systemctl start lightdm.service
   #sudo killall Xorg 
-  sudo reboot -d 2
+  #sudo reboot -d 2
 fi

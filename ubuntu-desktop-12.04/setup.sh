@@ -1,11 +1,11 @@
 #!/bin/bash
 
 echo ==== setup ubuntu desktop ====
-cd /vagrant/ubuntu-desktop-16.04
+cd /vagrant/ubuntu-desktop-12.04
 
 # https://askubuntu.com/questions/426831/lxde-auto-login
 
-sudo cp -av  lightdm.conf /etc/lightdm/
+#sudo cp -av  lightdm.conf /etc/lightdm/
 #sudo service lightdm restart
 
 if [ ! -f /home/vagrant/Desktop/lxterminal.desktop ]
