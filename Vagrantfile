@@ -16,7 +16,7 @@ SRV1_BOUT_INTERNAL=LAN_BOUT_INTERNAL+".150"
 
 # remote client (server kod klijenta)
 rcli_provision_shell = <<-SHELL
-echo "hello remote client" 
+echo "hello remote client"
 hostname
 SHELL
 
@@ -101,11 +101,11 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--name", "bout-server-1" ]
     end
 
-    srv.vm.provision :shell, :privileged => false,  inline: srv_bout_provision 
+    srv.vm.provision :shell, :privileged => false,  inline: srv_bout_provision
     srv.vm.provision :shell, :privileged => true, :path => "./firewall.sh"
   end
 
- 
+
   config.vm.define "rcli1" do |rcli|
 
     #rcli.persistent_storage.enabled = true
@@ -125,8 +125,8 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--name", "remote-client-1"]
     end
 
-    rcli.vm.provision :shell, :privileged => false, 
-                       inline: rcli1_provision_shell 
+    rcli.vm.provision :shell, :privileged => false,
+                       inline: rcli1_provision_shell
     rcli.vm.provision :shell, :privileged => true, :path => "./firewall.sh"
   end
 
@@ -155,7 +155,7 @@ Vagrant.configure("2") do |config|
 
 
   config.vm.define "wsbout1" do |ws|
-    ws.vm.box = "greenbox"
+    ws.vm.box = "ubuntu-desktop-16.04-i386"
     ws.vm.hostname = 'bringout-ws-1'
 
     ws.vm.network :private_network, ip: LAN_BOUT_INTERNAL + ".201"   #, netmask: "24"
@@ -164,8 +164,12 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--name", "bringout-ws-1"]
     end
     ws.vm.provision :shell, :privileged => false, inline: wsbout1_provision_shell
-    ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
-    
+    ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh"
+    config.vm.provision "file", source: "./f18_linux_install.tgz", destination: "/tmp/f18_linux_install.tgz"
+    config.vm.provision "file", source: "./f18-client/F18.desktop", destination: "/home/vagrant/Desktop/F18.desktop"
+    ws.vm.provision :shell, :privileged => false, :path => "./f18_install.sh"
+
+
   end
 
   config.vm.define "wsbout2" do |ws|
@@ -178,8 +182,8 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--name", "bringout-ws-2"]
     end
     ws.vm.provision :shell, :privileged => false, inline: wsbout2_provision_shell
-    ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
-    
+    ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh"
+
   end
 
 
@@ -197,8 +201,8 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--clipboard", "bidirectional" ]
     end
     ws.vm.provision :shell, :privileged => false, inline: ws1cli1_provision_shell
-    ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
-    ws.vm.provision :shell, :privileged => false, :path => "ubuntu-desktop-16.04/setup.sh" 
+    ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh"
+    ws.vm.provision :shell, :privileged => false, :path => "ubuntu-desktop-16.04/setup.sh"
   end
 
 
@@ -215,8 +219,8 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--clipboard", "bidirectional" ]
     end
     ws.vm.provision :shell, :privileged => false, inline: ws1cli2_provision_shell
-    ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
-    ws.vm.provision :shell, :privileged => false, :path => "ubuntu-desktop-12.04/setup.sh" 
+    ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh"
+    ws.vm.provision :shell, :privileged => false, :path => "ubuntu-desktop-12.04/setup.sh"
   end
 
 
@@ -233,7 +237,7 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--clipboard", "bidirectional" ]
     end
     ws.vm.provision :shell, :privileged => false, inline: ws2cli2_provision_shell
-    #ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh" 
+    #ws.vm.provision :shell, :privileged => true, :path => "./firewall.sh"
   end
 
 end
